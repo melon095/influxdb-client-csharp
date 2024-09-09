@@ -455,7 +455,7 @@ namespace Client.Linq.Test
         public void QueryAggregateWindow()
         {
             var query = from s in InfluxDBQueryable<Sensor>.Queryable("my-bucket", "my-org", _client.GetQueryApiSync())
-                where s.Timestamp.AggregateWindow(TimeSpan.FromDays(4), null, "mean")
+                where s.Timestamp.AggregateWindow(TimeSpan.FromDays(4), null, "mean", false)
                 where s.Timestamp > new DateTime(2020, 11, 15, 0, 0, 0, DateTimeKind.Utc)
                 where s.Timestamp < new DateTime(2020, 11, 18, 0, 0, 0, DateTimeKind.Utc)
                 select s;

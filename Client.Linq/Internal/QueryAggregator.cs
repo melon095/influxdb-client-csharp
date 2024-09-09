@@ -66,7 +66,7 @@ namespace InfluxDB.Client.Linq.Internal
         private readonly List<string> _filterByTags;
         private readonly List<string> _filterByFields;
         private readonly List<(string, string, bool, string)> _orders;
-        private (string Every, string Period, string Fn)? _aggregateWindow;
+        private (string Every, string Period, string Fn, string CreateEmpty)? _aggregateWindow;
 
         internal QueryAggregator()
         {
@@ -95,9 +95,9 @@ namespace InfluxDB.Client.Linq.Internal
             _rangeStopExpression = expressionType;
         }
 
-        internal void AddAggregateWindow(string everyVariable, string periodVariable, string fnVariable)
+        internal void AddAggregateWindow(string everyVariable, string periodVariable, string fnVariable, string createEmptyVariable)
         {
-            _aggregateWindow = (everyVariable, periodVariable, fnVariable);
+            _aggregateWindow = (everyVariable, periodVariable, fnVariable, createEmptyVariable);
         }
 
 
@@ -245,19 +245,20 @@ namespace InfluxDB.Client.Linq.Internal
                 }
         }
 
-        private string BuildAggregateWindow((string Every, string Period, string Fn)? aggregateWindow)
+        private string BuildAggregateWindow((string Every, string Period, string Fn, string CreateEmtpy)? aggregateWindow)
         {
             if (aggregateWindow == null)
             {
                 return null;
             }
 
-            var (every, period, fn) = aggregateWindow.Value;
+            var (every, period, fn, createEmpty) = aggregateWindow.Value;
             var list = new List<string>
             {
                 $"every: {every}",
                 period != null ? $"period: {period}" : null,
-                $"fn: {fn}"
+                $"fn: {fn}",
+                $"createEmpty: {createEmpty}"
             };
 
 

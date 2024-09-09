@@ -1011,18 +1011,18 @@ namespace Client.Linq.Test
         public void AggregateWindow()
         {
             var query = from s in InfluxDBQueryable<Sensor>.Queryable("my-bucket", "my-org", _queryApi)
-                where s.Timestamp.AggregateWindow(TimeSpan.FromSeconds(20), TimeSpan.FromSeconds(40), "mean")
+                where s.Timestamp.AggregateWindow(TimeSpan.FromSeconds(20), TimeSpan.FromSeconds(40), "mean", false)
                 where s.Value == 5
                 select s;
             var visitor = BuildQueryVisitor(query);
 
-            StringAssert.Contains("aggregateWindow(every: p3, period: p4, fn: p5)", visitor.BuildFluxQuery());
+            StringAssert.Contains("aggregateWindow(every: p3, period: p4, fn: p5, createEmpty: p6)", visitor.BuildFluxQuery());
 
             var ast = visitor.BuildFluxAST();
 
             Assert.NotNull(ast);
             Assert.NotNull(ast.Body);
-            Assert.AreEqual(6, ast.Body.Count);
+            Assert.AreEqual(7, ast.Body.Count);
 
             var everyAssignment = ((OptionStatement)ast.Body[2]).Assignment as VariableAssignment;
             Assert.AreEqual("p3", everyAssignment?.Id.Name);
@@ -1037,15 +1037,19 @@ namespace Client.Linq.Test
             var fnAssignment = ((OptionStatement)ast.Body[4]).Assignment as VariableAssignment;
             Assert.AreEqual("p5", fnAssignment?.Id.Name);
             Assert.AreEqual("mean", (fnAssignment.Init as Identifier)?.Name);
+
+            var createEmptyAssignment = ((OptionStatement)ast.Body[5]).Assignment as VariableAssignment;
+            Assert.AreEqual("p6", createEmptyAssignment?.Id.Name);
+            Assert.AreEqual(false, (createEmptyAssignment.Init as BooleanLiteral)?.Value);
         }
 
         [Test]
         public void AggregateWindowCustomFunction()
         {
             var query = from s in InfluxDBQueryable<Sensor>.Queryable("my-bucket", "my-org", _queryApi)
-                where s.Timestamp.AggregateWindow(TimeSpan.FromSeconds(20), TimeSpan.FromSeconds(40), "min")
-                where s.Value == 5
-                select s;
+                        where s.Timestamp.AggregateWindow(TimeSpan.FromSeconds(20), TimeSpan.FromSeconds(40), "min", false)
+                        where s.Value == 5
+                        select s;
 
             var visitor = BuildQueryVisitor(query);
             var ast = visitor.BuildFluxAST();
@@ -1062,49 +1066,49 @@ namespace Client.Linq.Test
             {
                 (
                     from s in InfluxDBQueryable<Sensor>.Queryable("my-bucket", "my-org", _queryApi)
-                    where s.Timestamp.AggregateWindow(TimeSpan.FromSeconds(20), TimeSpan.FromSeconds(40), "mean")
+                    where s.Timestamp.AggregateWindow(TimeSpan.FromSeconds(20), TimeSpan.FromSeconds(40), "mean", false)
                     select s,
-                    "aggregateWindow(every: p3, period: p4, fn: p5)",
+                    "aggregateWindow(every: p3, period: p4, fn: p5, createEmpty: p6)",
                     ""
                 ),
                 (
                     from s in InfluxDBQueryable<Sensor>.Queryable("my-bucket", "my-org", _queryApi)
-                    where s.Timestamp.AggregateWindow(TimeSpan.FromSeconds(20), null, "mean")
+                    where s.Timestamp.AggregateWindow(TimeSpan.FromSeconds(20), null, "mean", true)
                     select s,
-                    "aggregateWindow(every: p3, fn: p4)",
+                    "aggregateWindow(every: p3, fn: p4, createEmpty: p5)",
                     ""
                 ),
                 (
                     from s in InfluxDBQueryable<Sensor>.Queryable("my-bucket", "my-org", _queryApi)
-                    where s.Timestamp.AggregateWindow(TimeSpan.FromSeconds(20), null, "mean")
+                    where s.Timestamp.AggregateWindow(TimeSpan.FromSeconds(20), null, "mean", true)
                     where s.Value == 5
                     select s,
-                    "aggregateWindow(every: p3, fn: p4)",
-                    " |> filter(fn: (r) => (r[\"data\"] == p5))"
+                    "aggregateWindow(every: p3, fn: p4, createEmpty: p5)",
+                    " |> filter(fn: (r) => (r[\"data\"] == p6))"
                 ),
                 (
                     from s in InfluxDBQueryable<Sensor>.Queryable("my-bucket", "my-org", _queryApi)
                     where s.Value == 5
-                    where s.Timestamp.AggregateWindow(TimeSpan.FromSeconds(20), null, "mean")
+                    where s.Timestamp.AggregateWindow(TimeSpan.FromSeconds(20), null, "mean", false)
                     select s,
-                    "aggregateWindow(every: p4, fn: p5)",
+                    "aggregateWindow(every: p4, fn: p5, createEmpty: p6)",
                     " |> filter(fn: (r) => (r[\"data\"] == p3))"
                 ),
                 (
                     from s in InfluxDBQueryable<Sensor>.Queryable("my-bucket", "my-org", _queryApi)
                     where s.Deployment == "prod"
                     where s.Value == 5
-                    where s.Timestamp.AggregateWindow(TimeSpan.FromSeconds(20), null, "mean")
+                    where s.Timestamp.AggregateWindow(TimeSpan.FromSeconds(20), null, "mean", true)
                     select s,
-                    "filter(fn: (r) => (r[\"deployment\"] == p3)) |> aggregateWindow(every: p5, fn: p6)",
+                    "filter(fn: (r) => (r[\"deployment\"] == p3)) |> aggregateWindow(every: p5, fn: p6, createEmpty: p7)",
                     " |> filter(fn: (r) => (r[\"data\"] == p4))"
                 ),
                 (
                     from s in InfluxDBQueryable<Sensor>.Queryable("my-bucket", "my-org", _queryApi)
                     where s.Deployment == "prod" && s.Value == 5 &&
-                          s.Timestamp.AggregateWindow(TimeSpan.FromSeconds(20), null, "mean")
+                          s.Timestamp.AggregateWindow(TimeSpan.FromSeconds(20), null, "mean", false)
                     select s,
-                    "filter(fn: (r) => (r[\"deployment\"] == p3)) |> aggregateWindow(every: p5, fn: p6)",
+                    "filter(fn: (r) => (r[\"deployment\"] == p3)) |> aggregateWindow(every: p5, fn: p6, createEmpty: p7)",
                     " |> filter(fn: (r) => (r[\"data\"] == p4))"
                 )
             };
@@ -1126,7 +1130,7 @@ namespace Client.Linq.Test
         public void AggregateWindowOnlyForTimestamp()
         {
             var query = from s in InfluxDBQueryable<SensorDateTimeAsField>.Queryable("my-bucket", "my-org", _queryApi)
-                where s.DateTimeField.AggregateWindow(TimeSpan.FromSeconds(20), TimeSpan.FromSeconds(40), "mean")
+                where s.DateTimeField.AggregateWindow(TimeSpan.FromSeconds(20), TimeSpan.FromSeconds(40), "mean", false)
                 where s.Value == 5
                 select s;
 

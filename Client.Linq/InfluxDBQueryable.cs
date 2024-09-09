@@ -293,14 +293,15 @@ namespace InfluxDB.Client.Linq
         /// <param name="every">Duration of time between windows.</param>
         /// <param name="period">Duration of the window.</param>
         /// <param name="fn">Aggregate or selector function used to operate on each window of time.</param>
+        /// <param name="createEmpty">Create empty windows for periods with no data.</param>
         /// <returns>NotSupportedException if it's called outside LINQ expression.</returns>
         /// <exception cref="NotSupportedException">Caused by calling outside of LINQ expression.</exception>
         // ReSharper disable UnusedParameter.Global
         public static bool AggregateWindow(this DateTime timestamp, TimeSpan every, TimeSpan? period = null,
-            string fn = "mean")
+            string fn = "mean", bool createEmpty = false)
         {
             throw new NotSupportedException("This should be used only in LINQ expression. " +
-                                            "Something like: 'where s.Timestamp.AggregateWindow(TimeSpan.FromSeconds(20), TimeSpan.FromSeconds(40), \"mean\")'.");
+                                            "Something like: 'where s.Timestamp.AggregateWindow(TimeSpan.FromSeconds(20), TimeSpan.FromSeconds(40), \"mean\", false)'.");
         }
     }
 }

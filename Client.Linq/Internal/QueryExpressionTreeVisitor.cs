@@ -182,7 +182,14 @@ namespace InfluxDB.Client.Linq.Internal
                 Arguments.CheckNonEmptyString(fn, "fn");
                 var fnVariable = _context.Variables.AddNamedVariable(new Identifier("Identifier", fn));
 
-                _context.QueryAggregator.AddAggregateWindow(everyVariable, periodVariable, fnVariable);
+
+                //
+                // createEmpty
+                //
+                var createEmpty = ((ConstantExpression)expression.Arguments[4]).Value as bool?;
+                var createEmptyVariable = _context.Variables.AddNamedVariable(createEmpty);
+
+                _context.QueryAggregator.AddAggregateWindow(everyVariable, periodVariable, fnVariable, createEmptyVariable);
 
                 return expression;
             }
